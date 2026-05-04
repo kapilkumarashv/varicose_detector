@@ -228,11 +228,26 @@ export default function ResultCard({ result, preview, onReset, isLive }: Props) 
                             <Icon size={26} style={{ color: cfg.color }} />
                         </div>
                         <div>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5 font-bold">Live Status</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5 font-bold">
+                                {result.isFallback ? 'Fallback Status (Own Model)' : 'Live Status'}
+                            </p>
                             <h2 className="font-display text-2xl text-white">{cfg.label}</h2>
                             <p className="text-sm font-medium" style={{ color: cfg.color }}>{cfg.sublabel}</p>
                         </div>
                     </motion.div>
+
+                    {result.isFallback && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2"
+                        >
+                            <AlertTriangle size={14} className="text-amber-500" />
+                            <span className="text-[10px] text-amber-200/80 font-medium uppercase tracking-wider">
+                                Primary AI Issue: Analysis via Edge Model
+                            </span>
+                        </motion.div>
+                    )}
 
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
@@ -246,11 +261,26 @@ export default function ResultCard({ result, preview, onReset, isLive }: Props) 
                     </motion.div>
                 </div>
 
+                {/* Visual Legend */}
+                <div className="flex flex-wrap gap-2">
+                    {Array.from(new Set(result.findings.map(f => f.label))).map(label => (
+                        <span key={label} className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/60 text-[8px] text-slate-300 border border-slate-700/50 uppercase font-bold tracking-tighter">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            {label.replace('-', ' ')}
+                        </span>
+                    ))}
+                </div>
+
                 <div className="border-t border-slate-700/50" />
+
+                {/* Risk Level Indicator */}
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+                    <RiskLevelIndicator level={result.riskLevel} color={cfg.color} />
+                </motion.div>
 
                 {/* Accuracy Hidden as per request */}
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <div className="flex items-center gap-2 text-slate-500 text-xs mb-4">
+                    <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
                         <Activity size={14} />
                         AI Analysis Complete
                     </div>
@@ -273,22 +303,53 @@ export default function ResultCard({ result, preview, onReset, isLive }: Props) 
                             </div>
                             <div>
                                 <h4 className="text-slate-200 text-sm font-bold uppercase tracking-wide">{f.anatomicalLocation}</h4>
-                                <p className="text-slate-400 text-xs leading-relaxed mt-1">{f.label.replace('-', ' ')}</p>
+                                <p className="text-slate-400 text-xs leading-relaxed mt-1">{f.clinicalDescription}</p>
                             </div>
                         </motion.div>
                     ))}
                 </div>
 
-                {/* Clinical Summary */}
+                {/* Clinical Summary & Doctor Analysis */}
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    key={result.clinicalSummary}
-                    className="rounded-2xl p-4 flex flex-col gap-3 bg-slate-800/30 border border-slate-700/50"
+                    className="flex flex-col gap-4"
                 >
-                    <p className="text-slate-400 text-sm leading-relaxed italic">
-                        "{result.clinicalSummary}"
-                    </p>
+                    <div className="rounded-2xl p-4 flex flex-col gap-3 bg-slate-800/30 border border-slate-700/50">
+                        <div className="flex items-center gap-2 text-slate-300 font-semibold text-xs uppercase tracking-wider">
+                            <FileText size={14} className="text-amber-500" />
+                            Clinical Analysis
+                        </div>
+                        <div className="text-slate-400 text-xs leading-relaxed italic line-clamp-6 hover:line-clamp-none transition-all cursor-pointer">
+                            {result.doctorReport || result.clinicalSummary}
+                        </div>
+                    </div>
+
+                    {/* Recommendation */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="rounded-2xl p-4 flex gap-3 bg-amber-500/10 border border-amber-500/20"
+                    >
+                        <Activity size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-amber-200 text-[10px] font-bold uppercase mb-1">Recommended Pathway</p>
+                            <p className="text-slate-300 text-xs leading-relaxed">{cfg.recommendation}</p>
+                        </div>
+                    </motion.div>
+
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleDownloadReport}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl
+                         bg-amber-500 text-navy-mid hover:bg-amber-400
+                         transition-all font-bold text-xs uppercase tracking-widest"
+                        style={{ color: '#0B1120' }}
+                    >
+                        <Download size={14} />
+                        Download Full Report
+                    </motion.button>
                 </motion.div>
             </div>
         );
@@ -348,11 +409,29 @@ export default function ResultCard({ result, preview, onReset, isLive }: Props) 
                             <Icon size={26} style={{ color: cfg.color }} />
                         </div>
                         <div>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5 font-bold">Clinical Assessment</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5 font-bold">
+                                {result.isFallback ? 'Diagnostic Assessment (Own Model)' : 'Clinical Assessment'}
+                            </p>
                             <h2 className="font-display text-2xl text-white">{cfg.label}</h2>
                             <p className="text-sm font-medium" style={{ color: cfg.color }}>{cfg.sublabel}</p>
                         </div>
                     </motion.div>
+
+                    {result.isFallback && (
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3"
+                        >
+                            <div className="p-1.5 rounded-full bg-amber-500/20">
+                                <AlertTriangle size={16} className="text-amber-500" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Primary AI Offline</p>
+                                <p className="text-[11px] text-slate-400">Analysis provided by local diagnostic engine.</p>
+                            </div>
+                        </motion.div>
+                    )}
 
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
@@ -410,6 +489,11 @@ export default function ResultCard({ result, preview, onReset, isLive }: Props) 
                     </div>
                     <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
                         {result.doctorReport || result.clinicalSummary}
+                        {result.isFallback && (
+                            <p className="mt-4 text-[11px] text-slate-500 italic border-t border-slate-700/50 pt-3">
+                                * Detailed medical analysis is limited in fallback mode. Connect to cloud AI for full clinical scenario reporting.
+                            </p>
+                        )}
                     </div>
                 </motion.div>
 

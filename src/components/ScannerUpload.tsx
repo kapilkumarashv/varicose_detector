@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, ClipboardList, X, AlertCircle } from 'lucide-react';
 import { analyzeImageWithGemini } from '@/lib/gemini';
-import type { ScanResult } from '@/lib/roboflow';
+import { analyzeImage, type ScanResult } from '@/lib/roboflow';
 import ResultCard from './ResultCard';
 
 // ── Animation variants ──────────────────────────────────────────────────────
@@ -85,13 +85,22 @@ export default function ScannerUpload({ onBack }: Props) {
         if (!fileRef.current) return;
         setStage('scanning');
         try {
+            // Primary: Gemini AI
             const scanResult = await analyzeImageWithGemini(fileRef.current);
             setResult(scanResult);
             setStage('result');
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Analysis failed. Check your API key and try again.';
-            setError(msg);
-            setStage('error');
+            console.warn("Primary AI (Gemini) failed, attempting fallback to Roboflow...", err);
+            try {
+                // Secondary: Roboflow Fallback
+                const fallbackResult = await analyzeImage(fileRef.current);
+                setResult({ ...fallbackResult, isFallback: true });
+                setStage('result');
+            } catch (fallbackErr: unknown) {
+                const msg = fallbackErr instanceof Error ? fallbackErr.message : 'Both Primary and Fallback AI models failed. Please check your connection.';
+                setError(msg);
+                setStage('error');
+            }
         }
     };
 

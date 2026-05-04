@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Settings, AlertCircle, Play, Pause, RefreshCw, X, Terminal, Info, ShieldAlert, CheckCircle2, Activity } from 'lucide-react';
 import { analyzeImage, type ScanResult } from '@/lib/roboflow';
+import { analyzeBase64WithGemini } from '@/lib/gemini';
 import ResultCard from './ResultCard';
 import AnatomyOverlay from './AnatomyOverlay';
 
@@ -84,26 +85,33 @@ export default function LiveScanner({ onBack }: Props) {
             setFrozenImage(base64);
             setIsFrozen(true);
 
-            // Run AI analysis
+            // Run Gemini AI analysis (Primary)
             const startTime = performance.now();
-            const scanResult = await analyzeImage(base64);
+            try {
+                const scanResult = await analyzeBase64WithGemini(base64);
+                setResult(scanResult);
+                addLog(`Primary Gemini AI analysis complete in ${Math.round(performance.now() - startTime)}ms`, "success");
+            } catch (geminiErr: any) {
+                addLog("Gemini AI failed, attempting fallback to Roboflow...", "warn");
+                // Secondary: Roboflow Fallback
+                const fallbackResult = await analyzeImage(base64);
+                setResult({ ...fallbackResult, isFallback: true });
+                addLog(`Fallback Roboflow analysis complete in ${Math.round(performance.now() - startTime)}ms`, "success");
+            }
             
-            setResult(scanResult);
             setError(null);
-            
             const endTime = performance.now();
             setStats(prev => ({
                 fps: 0, // Manual mode
                 latency: Math.round(endTime - startTime)
             }));
-            addLog(`Analysis complete in ${Math.round(endTime - startTime)}ms`, "success");
         } catch (err: any) {
             if (err.name === 'SecurityError' || err.message.includes('tainted')) {
                 const msg = "CORS Security Block: Camera IP is denying access. Add 'Access-Control-Allow-Origin: *' to ESP32 code.";
                 setError(msg);
                 addLog(msg, "error");
             } else {
-                addLog(`Analysis failed: ${err.message}`, "error");
+                addLog(`Both AI models failed: ${err.message}`, "error");
             }
         } finally {
             setIsAnalyzing(false);
@@ -354,7 +362,7 @@ export default function LiveScanner({ onBack }: Props) {
                                                 <Activity size={24} className="text-sky-400 animate-pulse" />
                                             </div>
                                         </div>
-                                        <span className="text-white text-sm font-medium tracking-widest uppercase bg-black/60 px-4 py-1.5 rounded-full border border-white/10">Analyzing ...</span>
+                                        <span className="text-white text-sm font-medium tracking-widest uppercase bg-black/60 px-4 py-1.5 rounded-full border border-white/10">Gemini Multimodal Analysis ...</span>
                                     </div>
                                 </div>
                             )}
@@ -478,7 +486,7 @@ export default function LiveScanner({ onBack }: Props) {
                             Diagnostic Report
                         </div>
                         {result ? (
-                            <ResultCard result={result} isLive />
+                            <ResultCard result={result} preview={frozenImage || undefined} isLive />
                         ) : (
                             <div className="h-[400px] flex flex-col items-center justify-center glass rounded-3xl border border-white/5 text-center p-8">
                                 <RefreshCw className={`text-slate-700 mb-4 ${isAnalyzing ? 'animate-spin' : ''}`} size={32} />

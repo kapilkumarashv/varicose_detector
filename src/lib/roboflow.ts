@@ -42,6 +42,7 @@ export interface ScanResult {
     ceapClassification: string;
     clinicalSummary: string;
     doctorReport?: string;
+    isFallback?: boolean;
 }
 
 /**

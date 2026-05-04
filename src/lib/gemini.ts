@@ -80,18 +80,25 @@ function convertGeminiBoxToBBox(box: number[]): BBox {
   };
 }
 
-export async function analyzeImageWithGemini(file: File): Promise<ScanResult & { doctorReport: string }> {
-  const base64Data = await new Promise<string>((resolve) => {
+async function getBase64(file: File): Promise<string> {
+  return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
     reader.readAsDataURL(file);
   });
+}
 
+export async function analyzeImageWithGemini(file: File): Promise<ScanResult & { doctorReport: string }> {
+  const base64Data = await getBase64(file);
+  return analyzeBase64WithGemini(base64Data, file.type);
+}
+
+export async function analyzeBase64WithGemini(base64Data: string, mimeType: string = "image/jpeg"): Promise<ScanResult & { doctorReport: string }> {
   const result = await model.generateContent([
     {
       inlineData: {
         data: base64Data,
-        mimeType: file.type,
+        mimeType: mimeType,
       },
     },
     "Perform an advanced vascular diagnostic analysis. Focus on exact anatomical positioning and provide a detailed surgical-grade report including scenario and medical facts.",
