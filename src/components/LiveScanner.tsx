@@ -90,9 +90,9 @@ export default function LiveScanner({ onBack }: Props) {
             try {
                 const scanResult = await analyzeBase64WithGemini(base64);
                 setResult(scanResult);
-                addLog(`Primary Gemini AI analysis complete in ${Math.round(performance.now() - startTime)}ms`, "success");
+                addLog(`Primary AI analysis complete in ${Math.round(performance.now() - startTime)}ms`, "success");
             } catch (geminiErr: any) {
-                addLog("Gemini AI failed, attempting fallback to Roboflow...", "warn");
+                addLog("Primary AI failed, attempting fallback to Edge model...", "warn");
                 // Secondary: Roboflow Fallback
                 const fallbackResult = await analyzeImage(base64);
                 setResult({ ...fallbackResult, isFallback: true });
@@ -362,7 +362,7 @@ export default function LiveScanner({ onBack }: Props) {
                                                 <Activity size={24} className="text-sky-400 animate-pulse" />
                                             </div>
                                         </div>
-                                        <span className="text-white text-sm font-medium tracking-widest uppercase bg-black/60 px-4 py-1.5 rounded-full border border-white/10">Gemini Multimodal Analysis ...</span>
+                                        <span className="text-white text-sm font-medium tracking-widest uppercase bg-black/60 px-4 py-1.5 rounded-full border border-white/10">AI Multimodal Analysis ...</span>
                                     </div>
                                 </div>
                             )}

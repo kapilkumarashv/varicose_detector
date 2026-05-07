@@ -272,7 +272,7 @@ export default function ScannerUpload({ onBack }: Props) {
                                     className="w-14 h-14 rounded-full border-2 border-transparent border-t-amber-400 mb-4"
                                 />
                                 <p className="text-amber-400 font-semibold text-lg">AI Multimodal Diagnosis…</p>
-                                <p className="text-slate-500 text-sm mt-1">Powered by Gemini 1.5 Flash</p>
+                                <p className="text-slate-500 text-sm mt-1">Powered by Advanced Clinical AI</p>
                             </div>
                         </div>
 

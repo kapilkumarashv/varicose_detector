@@ -1,83 +1,62 @@
-# Varicose Disease Detector: Technical Knowledge Transfer
+# Varicose Disease Detector: Technical Knowledge Transfer (Updated May 2026)
 
 ## 1. System Architecture Overview
-The Varicose Disease Detector is a high-performance clinical diagnostic application.
+The Varicose Disease Detector is a high-performance clinical diagnostic application utilizing a **Dual AI Failover Architecture**.
 
 *   **Framework**: Next.js 15 (App Router)
-*   **UI/UX**: Tailwind CSS for styling, Framer Motion for state-driven animations.
-*   **State Management**: React `useState` and `useRef` for real-time camera handling.
-*   **AI Pipelines**: 
-    *   **Gemini 1.5 Flash**: Primary diagnostic pipeline used for both Image Scanning and Live Stream Analysis.
-    *   **Anatomical Mapping**: Custom logic for high-precision localization based on AI bounding boxes.
+*   **AI Strategy**: 
+    *   **Primary**: Google Gemini 1.5 Flash (Cloud-based deep multimodal analysis).
+    *   **Secondary/Fallback**: Roboflow (Edge-based object detection).
+*   **Reporting**: `jsPDF` clinical document generator.
+*   **UI/UX**: Framer Motion & Tailwind CSS with a clinical-grade dark aesthetic.
 
 ---
 
-## 2. Core Workflows
+## 2. Core Workflows (Updated)
 
-### A. Clinical Diagnostic Scanner (Image Upload)
-**Path**: `src/components/ScannerUpload.tsx` -> `src/lib/gemini.ts`
+### A. Professional Diagnostic Scanner (Static Image)
+**Path**: `ScannerUpload.tsx` -> `gemini.ts` -> `ResultCard.tsx`
 
-1.  **Selection**: User selects "Image" mode.
-2.  **Upload & Preview**: The user uploads an image which is stored as a `File` object and displayed using `URL.createObjectURL`.
-3.  **Analysis Trigger**: `runScan()` is called.
-4.  **The AI Process**:
-    *   The image is converted to a Base64 string.
-    *   It is sent to the **Gemini 1.5 Flash** model with a "Surgical Grade" system instruction.
-    *   **Output**: Gemini returns a structured JSON object containing detected veins, their 2D bounding boxes (normalized to 1000), a CEAP classification, and a detailed medical report.
-5.  **Result Display**: The data is mapped to the `ResultCard` component.
+1.  **Upload**: High-res patient imagery is uploaded.
+2.  **Multimodal Analysis**: Gemini analyzes the image for tortuosity and clinical markers.
+3.  **Report Generation**: The system builds a "Scenario Report" explaining the physiological basis of the findings.
+4.  **PDF Export**: User can download a structured PDF containing marked-up imagery and surgical recommendations.
 
-### B. Live Clinical Stream (Camera Feed)
-**Path**: `src/components/LiveScanner.tsx` -> `src/lib/roboflow.ts`
+### B. Live Clinical Stream with AI Failover
+**Path**: `LiveScanner.tsx` -> `lib/gemini.ts` (Primary) -> `lib/roboflow.ts` (Fallback)
 
-1.  **Hardware Connection**: User connects an ESP32-CAM via an IP URL.
-2.  **Real-time Feed**: The camera stream is rendered directly in an `<img>` tag.
-3.  **Frame Freeze**: When "Analyze" is clicked, the app "freezes" the feed by capturing the current frame into a hidden `<canvas>`.
-4.  **The AI Process**:
-    *   The canvas content is sent to **Gemini 1.5 Flash** (via `analyzeBase64WithGemini`).
-    *   The model performs a full clinical assessment (Varicose/Spider/Reticular veins).
-    *   **Structured Output**: Includes anatomical localization, CEAP class, and a detailed medical report.
-5.  **Anatomy Overlay**: The `AnatomyOverlay.tsx` component calculates the relative position of the findings and draws glowing markers over the leg imagery in real-time on the frozen frame.
+1.  **Live Feed**: Hardware (ESP32-CAM) stream is processed in real-time.
+2.  **Dual Inference**:
+    *   When "Analyze" is clicked, the app attempts a **Gemini** capture.
+    *   If the cloud API is slow or offline, it automatically switches to **Roboflow** for instant detection.
+3.  **Diagnostic Sidebar**: The sidebar populates instantly with localized findings while the camera feed is "frozen" for evidence review.
 
 ---
 
-## 3. Deep Analysis: Each Section Explained
+## 3. Deep Analysis of Updated Sections
 
-### Section 1: Anatomical Mapping (`lib/anatomy.ts`)
-This is the "medical brain" of the UI. It takes raw X/Y coordinates from the AI and translates them into clinical terminology:
-- **Vertical Zones**: Thigh, Knee, Calf, Ankle/Foot.
-- **Horizontal Zones**: Medial (Inside), Lateral (Outside), Anterior (Front), Posterior (Back).
-- **Result**: Instead of saying "Box at 0.5, 0.2", the app says **"Varicose vein detected in the Medial Proximal Thigh"**.
+### Section 1: PDF Clinical Reporting Engine
+Located in `ResultCard.tsx`, the `handleDownloadReport` function is a complex PDF generator that:
+- Draws detection boxes directly onto the patient's image within the PDF.
+- Categorizes findings into localized zones.
+- Appends the "Surgical Scenario" and "Medical Facts" derived from Gemini.
+- Formats everything into a print-ready clinical record.
 
-### Section 2: AI Multi-Modal Diagnosis (`lib/gemini.ts`)
-Unlike standard object detection, Gemini provides a **Surgical-Grade Report**:
-- **Scenario**: Hypothesizes the cause (e.g., "Venous hypertension resulting from valvular incompetence").
-- **Medical Facts**: Provides educational context for the doctor.
-- **Precision**: We use a `responseSchema` to force the AI to return valid JSON, preventing UI crashes.
+### Section 2: Risk Severity Indicator (Gauge UI)
+A specialized UI component that translates the AI's `riskLevel` into a visual gauge:
+- **Low**: Preventative care and routine monitoring.
+- **Medium**: Observation and potential compression therapy.
+- **High**: Urgent care and surgical consultation.
 
-### Section 3: Live Monitoring & Latency (`LiveScanner.tsx`)
-- **System Logs**: Tracks connection speed and API response times.
-- **Latency Tracker**: Measures the "Round Trip Time" (RTT) from clicking "Analyze" to receiving results, ensuring the system is fast enough for clinical use.
-
----
-
-## 4. Dashboard & Results (`ResultCard.tsx`)
-This is the final output screen. It aggregates data into several key areas:
-1.  **Risk Level**: Derived from the density and size of detected veins.
-2.  **CEAP Grade**: Automatically calculated based on the presence of specific markers (e.g., C2 for varicose, C4 for skin changes).
-3.  **Findings Table**: An interactive list of every detection with confidence scores and anatomical locations.
-4.  **Downloadable Report**: (Planned/Implemented) A summary that can be exported for patient records.
+### Section 3: Anatomical Intelligence & Legend
+The app now includes a **Visual Legend** that automatically updates based on detected features (Spider Veins, Varicose Veins, etc.). This ensures doctors can quickly identify the "type" of vascular anomaly without reading raw labels.
 
 ---
 
-## 5. Fail-Safe Architecture (Hybrid AI)
-The system employs a multi-tier analysis strategy to ensure 100% uptime in clinical environments:
-1.  **Tier 1: Gemini 1.5 Flash (Primary)**: Provides high-reasoning multimodal analysis and comprehensive surgical reports.
-2.  **Tier 2: Roboflow Edge (Fallback)**: Automatically engaged if Gemini is unreachable (API issues, token limits). It provides essential object detection and risk assessment.
-
-**Workflow Logic**:
-`Try Gemini` -> `On Error` -> `Log Issue` -> `Switch to Roboflow` -> `Mark Result as Fallback` -> `Update UI Dashboard`
+## 4. Technical Fail-Safe Logic
+The project now includes an `isFallback` flag in the `ScanResult`. This allows the UI to display a warning: *"Primary AI Offline - Analysis provided by local engine"*. This transparency is critical for clinical environments where accuracy expectations must be managed during network outages.
 
 ---
 
-## 6. Summary of Data Workflow
-`Input` -> `Preprocessing (Base64)` -> `AI Inference (Primary/Fallback)` -> `Coordinate Translation` -> `Clinical Categorization` -> `UI Dashboard`
+## 5. Summary of Updated Data Workflow
+`Hardware Input` -> `Base64 Buffer` -> `Primary AI (Gemini)` -> `(IF FAIL) -> Secondary AI (Roboflow)` -> `Result Sidebar` -> `PDF Generation`
