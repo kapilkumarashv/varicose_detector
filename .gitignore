@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch & temporary files
+/scratch/
+*.pyc
+__pycache__/
+ai_service/__pycache__/
+ai_service/DETECTION-OF-VARICOSE-VEINS-4/

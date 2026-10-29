@@ -1,6 +1,6 @@
 /**
  * Anatomical mapping utility for varicose vein locations.
- * Translates bounding box coordinates into clinical terminology.
+ * Translates bounding box coordinates into clinical terminology with bilateral multi-leg awareness.
  */
 
 export interface BBox {
@@ -10,43 +10,74 @@ export interface BBox {
     height: number; // Height (normalized 0-1)
 }
 
-export function getAnatomicalLocation(bbox: BBox): string {
+export function getFootAnatomicalLocation(bbox: BBox): string {
+    const { x, y } = bbox;
+    const leg = x > 0.35 ? 'Right Leg' : 'Left Leg';
+    let zone = '';
+    if (y < 0.35) {
+        zone = 'Supramalleolar Ankle Flexure';
+    } else if (y < 0.65) {
+        zone = 'Medial Malleolar Ankle Joint';
+    } else {
+        zone = 'Dorsal Foot / Instep & Arch';
+    }
+    return `${leg} - ${zone}`;
+}
+
+export function getAnatomicalLocation(bbox: BBox, isFootScan?: boolean): string {
+    if (isFootScan) {
+        return getFootAnatomicalLocation(bbox);
+    }
     const { x, y } = bbox;
 
-    let vertical = '';
-    let horizontal = '';
+    let leg = '';
+    let lateralAspect = '';
+    let verticalZone = '';
 
-    // Vertical zones
-    if (y < 0.25) vertical = 'Proximal Thigh';
-    else if (y < 0.45) vertical = 'Distal Thigh';
-    else if (y < 0.55) vertical = 'Knee / Popliteal region';
-    else if (y < 0.85) vertical = 'Calf';
-    else vertical = 'Ankle / Perimalleolar region';
+    // Determine Leg & Medial/Lateral anatomical orientation (assuming standard bilateral posterior/anterior view)
+    if (x < 0.50) {
+        leg = 'Left Leg';
+        if (x < 0.26) lateralAspect = 'Lateral';
+        else if (x > 0.38) lateralAspect = 'Medial';
+        else lateralAspect = 'Central Posterior';
+    } else {
+        leg = 'Right Leg';
+        if (x > 0.74) lateralAspect = 'Lateral';
+        else if (x < 0.62) lateralAspect = 'Medial';
+        else lateralAspect = 'Central Posterior';
+    }
 
-    // Horizontal zones (Assuming standard medial/lateral views for a single leg)
-    // Note: This is a simplification. In practice, left/right leg orientation matters.
-    if (x < 0.45) horizontal = 'Medial';
-    else if (x > 0.55) horizontal = 'Lateral';
-    else horizontal = 'Central';
+    // Vertical zones for clinical lower extremity vascular examination
+    if (y < 0.20) {
+        verticalZone = 'Popliteal Fossa / Proximal Calf';
+    } else if (y < 0.50) {
+        verticalZone = 'Mid Calf (Gastrocnemius Trunk)';
+    } else if (y < 0.78) {
+        verticalZone = 'Distal Calf (Soleus Junction)';
+    } else {
+        verticalZone = 'Perimalleolar Ankle / Supramalleolar';
+    }
 
-    return `${horizontal} ${vertical}`.trim();
+    return `${leg} - ${lateralAspect} ${verticalZone}`.trim();
 }
 
-export function getClinicalDescription(label: string, location: string): string {
+export function getClinicalDescription(label: string, location: string, caliberMm?: number): string {
+    const caliberStr = caliberMm ? ` (${caliberMm}mm caliber)` : '';
+
     const descMap: Record<string, string> = {
-        'varicose-vein': `Tortuous, dilated subcutaneous segment visible in the ${location}.`,
-        'spider-vein': `Telangiectatic clusters (C1) presenting in the ${location}.`,
-        'reticular-vein': `Dermal reticular veins (1-3mm) identified in the ${location}.`,
+        'varicose-vein': `Dilated, tortuous subcutaneous saphenous tributary segment${caliberStr} with valvular reflux in the ${location}.`,
+        'spider-vein': `Telangiectatic web-like intradermal clusters (C1)${caliberStr} presenting in the ${location}.`,
+        'reticular-vein': `Bluish subdermal feeding reticular venous network (1-3mm)${caliberStr} mapped in the ${location}.`,
     };
 
-    return descMap[label] || `Vascular irregularity detected in the ${location}.`;
+    return descMap[label] || `Subcutaneous vascular lesion detected in the ${location}.`;
 }
 
-export function getCEAPCategory(label: string): string {
-    const ceapMap: Record<string, string> = {
-        'varicose-vein': 'C2',
-        'spider-vein': 'C1',
-        'reticular-vein': 'C1',
-    };
-    return ceapMap[label] || 'C0/C1';
+export function getCEAPCategory(label: string, caliberMm?: number): string {
+    if (label.includes('varicose')) {
+        return (caliberMm && caliberMm >= 4.0) ? 'C2S' : 'C2';
+    }
+    if (label.includes('spider')) return 'C1';
+    if (label.includes('reticular')) return 'C1R';
+    return 'C1';
 }
